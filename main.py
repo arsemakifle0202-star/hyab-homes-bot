@@ -16,83 +16,148 @@ logging.basicConfig(
 )
 
 # የውይይት ደረጃዎች (States)
-LOCATION, BUDGET, PHONE, CONFIRM = range(4)
+NAME, PHONE, PROPERTY_TYPE, BEDROOMS, LOCATION, BUDGET = range(6)
 
-# የቦታዎች ዝርዝር ቁልፎች (Buttons)
+# የንብረት አይነቶች ቁልፎች
+PROPERTY_KEYBOARD = [
+    ['የመኖሪያ'],
+    ['የሱቅ'],
+    ['የቢሮ']
+]
+
+# የመኝታ ክፍሎች ቁልፎች
+BEDROOM_KEYBOARD = [
+    ['ባለ 1', 'ባለ 2'],
+    ['ባለ 3', 'ባለ 4']
+]
+
+# የቦታዎች ዝርዝር ቁልፎች
 LOCATION_KEYBOARD = [
     ['ካሳንችስ', 'መገናኛ/ሲግናል'],
     ['ፒያሳ', 'ሜክሲኮ'],
     ['ቦሌ/ጋዜቦ']
 ]
 
-# የበጀት ዝርዝር ቁልፎች (Buttons)
+# የበጀት ዝርዝር ቁልፎች
 BUDGET_KEYBOARD = [
     ['ከ 10-20 ሚሊዮን'],
     ['ከ 20-30 ሚሊዮን']
 ]
 
-# /start ሲባል የሚጀምር አስተናጋጅ
+# 1. /start ሲባል የሚጀምር - ስም መቀበያ
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    user_name = update.effective_user.first_name
     welcome_text = (
-        f"ሰላም {user_name}! እንኳን ወደ Hyab Homes በደህና መጡ።\n\n"
-        "የሚፈልጉትን የመኖሪያ ወይም የንግድ ቦታ ለመምረጥ እባክዎን ከታች ካሉት አማራጮች አንዱን ይምረጡ፦"
+        "ሰላም! እንኳን ወደ Hyab Homes በደህና መጡ። 😊\n\n"
+        "የሚፈልጉትን ንብረት በጥራት ለማቅረብ እንድንችል እባክዎን በመጀመሪያ **ሙሉ ስምዎን** ያስገቡልን፦"
     )
-    await update.message.reply_text(
-        welcome_text,
-        reply_markup=ReplyKeyboardMarkup(
-            LOCATION_KEYBOARD, one_time_keyboard=True, resize_keyboard=True
-        )
-    )
-    return LOCATION
+    await update.message.reply_text(welcome_text, reply_markup=ReplyKeyboardRemove(), parse_mode='Markdown')
+    return NAME
 
-# ቦታ ሲመረጥ
-async def location_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    context.user_data['location'] = update.message.text
+# 2. ስም ሲገባ - ስልክ ቁጥር መቀበያ
+async def name_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    context.user_data['name'] = update.message.text
     await update.message.reply_text(
-        f"በጣም ጥሩ! የመረጡት ቦታ፦ {context.user_data['location']}\n\n"
-        "አሁን ደግሞ ያሰቡትን የበጀት መጠን ከታች ካሉት አማራጮች ይምረጡ፦",
-        reply_markup=ReplyKeyboardMarkup(
-            BUDGET_KEYBOARD, one_time_keyboard=True, resize_keyboard=True
-        )
-    )
-    return BUDGET
-
-# በጀት ሲመረጥ
-async def budget_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    context.user_data['budget'] = update.message.text
-    await update.message.reply_text(
-        f"አመሰግናለሁ! የተመረጠው በጀት፦ {context.user_data['budget']}\n\n"
-        "እባክዎን የትስስር (ስልክ) ቁጥርዎን ያስገቡልን፦",
-        reply_markup=ReplyKeyboardRemove()
+        f"እናመሰግናለን {context.user_data['name']}! 🙏\n\n"
+        "እባክዎን እርስዎን የምናገኝበትን **የስልክ ቁጥር** ያስገቡልን፦"
     )
     return PHONE
 
-# ስልክ ቁጥር ሲገባ
+# 3. ስልክ ቁጥር ሲገባ - የንብረት አይነት መቀበያ
 async def phone_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data['phone'] = update.message.text
+    await update.message.reply_text(
+        "በጣም ጥሩ! አሁን ደግሞ **ምን አይነት ንብረት** እንደሚፈልጉ ከታች ካሉት አማራጮች ይምረጡ፦",
+        reply_markup=ReplyKeyboardMarkup(
+            PROPERTY_KEYBOARD, one_time_keyboard=True, resize_keyboard=True
+        )
+    )
+    return PROPERTY_TYPE
+
+# 4. የንብረት አይነት ሲመረጥ
+async def property_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    selected_type = update.message.text
+    context.user_data['property_type'] = selected_type
+
+    # የመኖሪያ ከተመረጠ የመኝታ ብዛት እንዲመርጥ ይጠይቃል
+    if selected_type == 'የመኖሪያ':
+        await update.message.reply_text(
+            "እሺ! **ባለ ስንት መኝታ** እንደሚፈልጉ ከታች ካሉት አማራጮች ይምረጡ፦",
+            reply_markup=ReplyKeyboardMarkup(
+                BEDROOM_KEYBOARD, one_time_keyboard=True, resize_keyboard=True
+            ),
+            parse_mode='Markdown'
+        )
+        return BEDROOMS
+    else:
+        # ሱቅ ወይም ቢሮ ከሆነ ቀጥታ ወደ ቦታ ምርጫ ይሸጋገራል
+        context.user_data['bedrooms'] = 'አልተገለጸም'
+        await update.message.reply_text(
+            f"እሺ! የመረጡት ንብረት አይነት፦ **{selected_type}**\n\n"
+            "ቀጥለው ደግሞ ንብረቱ የሚገኝበትን **ቦታ** ከታች ካሉት አማራጮች ይምረጡ፦",
+            reply_markup=ReplyKeyboardMarkup(
+                LOCATION_KEYBOARD, one_time_keyboard=True, resize_keyboard=True
+            ),
+            parse_mode='Markdown'
+        )
+        return LOCATION
+
+# 4.1. የመኝታ ብዛት ሲመረጥ (የመኖሪያ ለሆነ ብቻ)
+async def bedrooms_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    context.user_data['bedrooms'] = update.message.text
+    await update.message.reply_text(
+        f"በጣም ጥሩ! **{context.user_data['bedrooms']}** መኝታ ቤት ተመርጧል።\n\n"
+        "ቀጥለው ደግሞ ንብረቱ የሚገኝበትን **ቦታ** ከታች ካሉት አማራጮች ይምረጡ፦",
+        reply_markup=ReplyKeyboardMarkup(
+            LOCATION_KEYBOARD, one_time_keyboard=True, resize_keyboard=True
+        ),
+        parse_mode='Markdown'
+    )
+    return LOCATION
+
+# 5. ቦታ ሲመረጥ - በጀት መቀበያ
+async def location_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    context.user_data['location'] = update.message.text
+    await update.message.reply_text(
+        f"በጣም ያማረ ምርጫ! የተመረጠው ቦታ፦ **{context.user_data['location']}**\n\n"
+        "በመጨረሻም ያሰቡትን **የበጀት መጠን** ከታች ካሉት አማራጮች ይምረጡ፦",
+        reply_markup=ReplyKeyboardMarkup(
+            BUDGET_KEYBOARD, one_time_keyboard=True, resize_keyboard=True
+        ),
+        parse_mode='Markdown'
+    )
+    return BUDGET
+
+# 6. በጀት ሲመረጥ - ማጠቃለያ እና ምስጋና
+async def budget_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    context.user_data['budget'] = update.message.text
+    
+    # የማጠቃለያ ጽሁፍ
+    bedrooms_info = f"\n🛏️ **የመኝታ ብዛት:** {context.user_data['bedrooms']}" if context.user_data['property_type'] == 'የመኖሪያ' else ""
     
     summary_text = (
-        "📋 **የመረጧቸው ዝርዝሮች፦**\n\n"
+        "✨ **ያቀረቡት መረጃ በትክክል ተመዝግቧል!** ✨\n\n"
+        f"👤 **ስም:** {context.user_data['name']}\n"
+        f"📞 **ስልክ:** {context.user_data['phone']}\n"
+        f"🏢 **የምርጫ አይነት:** {context.user_data['property_type']}"
+        f"{bedrooms_info}\n"
         f"📍 **ቦታ:** {context.user_data['location']}\n"
-        f"💰 **በጀት:** {context.user_data['budget']}\n"
-        f"📞 **ስልክ:** {context.user_data['phone']}\n\n"
-        "መረጃው ትክክል ከሆነ በቅርቡ አነጋግርዎታለን! አመሰግናለሁ።"
+        f"💰 **በጀት:** {context.user_data['budget']}\n\n"
+        "ስለ ሰጡን መረጃ እናመሰግናለን! 🙏\n"
+        "የድርጅታችን አባል በተመዘገበው ስልክ ቁጥርዎ በቅርቡ አነጋግሮ አመርቂ መረጃ ያቀርብልዎታል።"
     )
     
-    await update.message.reply_text(summary_text, parse_mode='Markdown')
+    await update.message.reply_text(summary_text, reply_markup=ReplyKeyboardRemove(), parse_mode='Markdown')
     return ConversationHandler.END
 
 # ሂደቱን ለማቋረጥ (/cancel)
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
-        "ሂደቱ ተቋርጧል። እንደገና ለመጀመር /start ይበሉ።",
+        "ሂደቱ ተቋርጧል። እንደገና ለመጀመር እባክዎን /start ይበሉ።",
         reply_markup=ReplyKeyboardRemove()
     )
     return ConversationHandler.END
 
 def main():
-    # አዲሱ Bot Token
     BOT_TOKEN = "8818812895:AAGjxnofPELR83l7ulS80h5pJZPG1FyoZ5Q"
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -100,9 +165,12 @@ def main():
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
+            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, name_choice)],
+            PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, phone_choice)],
+            PROPERTY_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, property_choice)],
+            BEDROOMS: [MessageHandler(filters.TEXT & ~filters.COMMAND, bedrooms_choice)],
             LOCATION: [MessageHandler(filters.TEXT & ~filters.COMMAND, location_choice)],
             BUDGET: [MessageHandler(filters.TEXT & ~filters.COMMAND, budget_choice)],
-            PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, phone_choice)],
         },
         fallbacks=[CommandHandler('cancel', cancel)],
     )
