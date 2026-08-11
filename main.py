@@ -93,7 +93,8 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 def main():
     # ቦት ቶከን
-    BOT_TOKEN = "7933932470:AAHLxY6P0pE2L3sY9S5nC2yY-Z-N_Q_xX_8"  # እዚህ ጋር የእርስዎን Bot Token ያረጋግጡ
+        BOT_TOKEN = "8818812895:AAGjxnofPELR83l7ulS80h5pJZPG1FyoZ5Q"
+  # እዚህ ጋር የእርስዎን Bot Token ያረጋግጡ
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
