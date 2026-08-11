@@ -1,110 +1,116 @@
 import logging
-import warnings
-import os
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
-    MessageHandler,
-    ConversationHandler,
     ContextTypes,
+    ConversationHandler,
+    MessageHandler,
     filters,
 )
 
-logging.basicConfig(level=logging.INFO)
-warnings.filterwarnings("ignore")
+# Logging ማዘጋጃ
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
-TOKEN = os.getenv("TOKEN", "8818812895:AAGjxnofPELR83l7ulS80h5pJZPG1FyoZ5Q")
-ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID", "8966922370")
+# የውይይት ደረጃዎች (States)
+LOCATION, BUDGET, PHONE, CONFIRM = range(4)
 
-NAME, PHONE, HOUSE_TYPE, BUDGET = range(4)
+# የቦታዎች ዝርዝር ቁልፎች (Buttons)
+LOCATION_KEYBOARD = [
+    ['ካሳንችስ', 'መገናኛ/ሲግናል'],
+    ['ፒያሳ', 'ሜክሲኮ'],
+    ['ቦሌ/ጋዜቦ']
+]
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "ሰላም! እንኳን ወደ Hyab Homes በሰላም መጡ። 👋\n\n"
-        "የሚፈልጉትን ቤት መረጃ ለመመዝገብ እባክዎን **ስምዎን** ያስገቡ፦"
+# የበጀት ዝርዝር ቁልፎች (Buttons)
+BUDGET_KEYBOARD = [
+    ['ከ 10-20 ሚሊዮን'],
+    ['ከ 20-30 ሚሊዮን']
+]
+
+# /start ሲባል የሚጀምር አስተናጋጅ
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user_name = update.effective_user.first_name
+    welcome_text = (
+        f"ሰላም {user_name}! እንኳን ወደ Hyab Homes በደህና መጡ።\n\n"
+        "የሚፈልጉትን የመኖሪያ ወይም የንግድ ቦታ ለመምረጥ እባክዎን ከታች ካሉት አማራጮች አንዱን ይምረጡ፦"
     )
-    return NAME
-
-async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['name'] = update.message.text
     await update.message.reply_text(
-        f"እናመሰግናለን {context.user_data['name']}!\n"
-        "አሁን ደግሞ **የስልክ ቁጥርዎን** ያስገቡልን፦"
+        welcome_text,
+        reply_markup=ReplyKeyboardMarkup(
+            LOCATION_KEYBOARD, one_time_keyboard=True, resize_keyboard=True
+        )
     )
-    return PHONE
+    return LOCATION
 
-async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['phone'] = update.message.text
-    
-    reply_keyboard = [['የመኖሪያ ቤት', 'የንግድ ቤት (ሱቅ)'], ['አፓርትመንት', 'ሌላ']]
+# ቦታ ሲመረጥ
+async def location_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    context.user_data['location'] = update.message.text
     await update.message.reply_text(
-        "በጣም ጥሩ! **ምን ዓይነት ቤት** ነው የሚፈልጉት?",
-        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True)
-    )
-    return HOUSE_TYPE
-
-async def get_house_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['house_type'] = update.message.text
-    await update.message.reply_text(
-        "መድበው የያዙት **በጀት (የገንዘብ መጠን)** ስንት ነው? (ለምሳሌ፦ 20% ቅድመ ክፍያ / 3 ሚሊዮን ብር)",
-        reply_markup=ReplyKeyboardRemove()
+        f"በጣም ጥሩ! የመረጡት ቦታ፦ {context.user_data['location']}\n\n"
+        "አሁን ደግሞ ያሰቡትን የበጀት መጠን ከታች ካሉት አማራጮች ይምረጡ፦",
+        reply_markup=ReplyKeyboardMarkup(
+            BUDGET_KEYBOARD, one_time_keyboard=True, resize_keyboard=True
+        )
     )
     return BUDGET
 
-async def get_budget(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# በጀት ሲመረጥ
+async def budget_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data['budget'] = update.message.text
-    
-    name = context.user_data['name']
-    phone = context.user_data['phone']
-    house_type = context.user_data['house_type']
-    budget = context.user_data['budget']
-    user_handle = update.effective_user.mention_html()
+    await update.message.reply_text(
+        f"አመሰግናለሁ! የተመረጠው በጀት፦ {context.user_data['budget']}\n\n"
+        "እባክዎን የትስስር (ስልክ) ቁጥርዎን ያስገቡልን፦",
+        reply_markup=ReplyKeyboardRemove()
+    )
+    return PHONE
 
+# ስልክ ቁጥር ሲገባ
+async def phone_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    context.user_data['phone'] = update.message.text
+    
     summary_text = (
-        "✅ **መረጃዎ በተሳካ ሁኔታ ተመዝግቧል!**\n\n"
-        f"👤 **ስም፦** {name}\n"
-        f"📞 **ስልክ፦** {phone}\n"
-        f"🏢 **የቤት ዓይነት፦** {house_type}\n"
-        f"💰 **በጀት፦** {budget}\n\n"
-        "በቅርብ ጊዜ በስልክ መስመራችን ደውለን እናናግርዎታለን። እናመሰግናለን!"
-    )
-    await update.message.reply_text(summary_text, parse_mode="Markdown")
-    
-    admin_text = (
-        "🚨 **አዲስ የደንበኛ መረጃ ደርሷል!**\n\n"
-        f"👤 **ስም፦** {name}\n"
-        f"📞 **ስልክ፦** {phone}\n"
-        f"🏢 **የቤት ዓይነት፦** {house_type}\n"
-        f"💰 **በጀት፦** {budget}\n"
-        f"🔗 **መገለጫ፦** {user_handle}"
+        "📋 **የመረጧቸው ዝርዝሮች፦**\n\n"
+        f"📍 **ቦታ:** {context.user_data['location']}\n"
+        f"💰 **በጀት:** {context.user_data['budget']}\n"
+        f"📞 **ስልክ:** {context.user_data['phone']}\n\n"
+        "መረጃው ትክክል ከሆነ በቅርቡ አነጋግርዎታለን! አመሰግናለሁ።"
     )
     
-    try:
-        await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=admin_text, parse_mode="HTML")
-    except Exception as e:
-        print(f"Error sending to admin: {e}")
-
+    await update.message.reply_text(summary_text, parse_mode='Markdown')
     return ConversationHandler.END
 
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("ምዝገባው ተሰርዟል። እንደገና ለመጀመር /start በሉ፤", reply_markup=ReplyKeyboardRemove())
+# ሂደቱን ለማቋረጥ (/cancel)
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text(
+        "ሂደቱ ተቋርጧል። እንደገና ለመጀመር /start ይበሉ።",
+        reply_markup=ReplyKeyboardRemove()
+    )
     return ConversationHandler.END
 
-if __name__ == '__main__':
-    app = ApplicationBuilder().token(TOKEN).build()
+def main():
+    # ቦት ቶከን
+    BOT_TOKEN = "7933932470:AAHLxY6P0pE2L3sY9S5nC2yY-Z-N_Q_xX_8"  # እዚህ ጋር የእርስዎን Bot Token ያረጋግጡ
+
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
-            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
-            PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_phone)],
-            HOUSE_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_house_type)],
-            BUDGET: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_budget)],
+            LOCATION: [MessageHandler(filters.TEXT & ~filters.COMMAND, location_choice)],
+            BUDGET: [MessageHandler(filters.TEXT & ~filters.COMMAND, budget_choice)],
+            PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, phone_choice)],
         },
         fallbacks=[CommandHandler('cancel', cancel)],
     )
 
     app.add_handler(conv_handler)
+    
     print("Bot is running...")
     app.run_polling()
+
+if __name__ == '__main__':
+    main()
