@@ -38,12 +38,6 @@ LOCATION_KEYBOARD = [
     ['ቦሌ/ጋዜቦ']
 ]
 
-# የበጀት ዝርዝር ቁልፎች
-BUDGET_KEYBOARD = [
-    ['ከ 10-20 ሚሊዮን'],
-    ['ከ 20-30 ሚሊዮን']
-]
-
 # 1. /start ሲባል የሚጀምር - ስም መቀበያ
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     welcome_text = (
@@ -78,7 +72,6 @@ async def property_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     selected_type = update.message.text
     context.user_data['property_type'] = selected_type
 
-    # የመኖሪያ ከተመረጠ የመኝታ ብዛት እንዲመርጥ ይጠይቃል
     if selected_type == 'የመኖሪያ':
         await update.message.reply_text(
             "እሺ! **ባለ ስንት መኝታ** እንደሚፈልጉ ከታች ካሉት አማራጮች ይምረጡ፦",
@@ -89,7 +82,6 @@ async def property_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         )
         return BEDROOMS
     else:
-        # ሱቅ ወይም ቢሮ ከሆነ ቀጥታ ወደ ቦታ ምርጫ ይሸጋገራል
         context.user_data['bedrooms'] = 'አልተገለጸም'
         await update.message.reply_text(
             f"እሺ! የመረጡት ንብረት አይነት፦ **{selected_type}**\n\n"
@@ -105,7 +97,7 @@ async def property_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def bedrooms_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data['bedrooms'] = update.message.text
     await update.message.reply_text(
-        f"በጣም ጥሩ! **{context.user_data['bedrooms']}** መኝታ ቤት ተመርጧል።\n\n"
+        f"በጣም ጥሩ! **{context.user_data['bedrooms']}** ተመርጧል።\n\n"
         "ቀጥለው ደግሞ ንብረቱ የሚገኝበትን **ቦታ** ከታች ካሉት አማራጮች ይምረጡ፦",
         reply_markup=ReplyKeyboardMarkup(
             LOCATION_KEYBOARD, one_time_keyboard=True, resize_keyboard=True
@@ -114,24 +106,21 @@ async def bedrooms_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     )
     return LOCATION
 
-# 5. ቦታ ሲመረጥ - በጀት መቀበያ
+# 5. ቦታ ሲመረጥ - የበጀት መጠን በጽሁፍ መጠየቂያ (ያለ ምርጫ ቁልፎች)
 async def location_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data['location'] = update.message.text
     await update.message.reply_text(
         f"በጣም ያማረ ምርጫ! የተመረጠው ቦታ፦ **{context.user_data['location']}**\n\n"
-        "በመጨረሻም ያሰቡትን **የበጀት መጠን** ከታች ካሉት አማራጮች ይምረጡ፦",
-        reply_markup=ReplyKeyboardMarkup(
-            BUDGET_KEYBOARD, one_time_keyboard=True, resize_keyboard=True
-        ),
+        "እባክዎን ያሰቡትን **የበጀት መጠን** በጽሁፍ ያስገቡልን (ለምሳሌ፦ ከ 10-20 ሚሊዮን)፦",
+        reply_markup=ReplyKeyboardRemove(),
         parse_mode='Markdown'
     )
     return BUDGET
 
-# 6. በጀት ሲመረጥ - ማጠቃለያ እና ምስጋና
+# 6. በጀት በጽሁፍ ሲገባ - ማጠቃለያ እና ምስጋና
 async def budget_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data['budget'] = update.message.text
     
-    # የማጠቃለያ ጽሁፍ
     bedrooms_info = f"\n🛏️ **የመኝታ ብዛት:** {context.user_data['bedrooms']}" if context.user_data['property_type'] == 'የመኖሪያ' else ""
     
     summary_text = (
