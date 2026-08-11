@@ -15,6 +15,9 @@ logging.basicConfig(
     level=logging.INFO
 )
 
+# ያንተ Telegram Chat ID
+ADMIN_CHAT_ID = "8966922370"
+
 # የውይይት ደረጃዎች (States)
 NAME, PHONE, PROPERTY_TYPE, BEDROOMS, LOCATION, BUDGET = range(6)
 
@@ -106,7 +109,7 @@ async def bedrooms_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     )
     return LOCATION
 
-# 5. ቦታ ሲመረጥ - የበጀት መጠን በጽሁፍ መጠየቂያ (ያለ ምርጫ ቁልፎች)
+# 5. ቦታ ሲመረጥ - የበጀት መጠን በጽሁፍ መጠየቂያ
 async def location_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data['location'] = update.message.text
     await update.message.reply_text(
@@ -117,13 +120,14 @@ async def location_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     )
     return BUDGET
 
-# 6. በጀት በጽሁፍ ሲገባ - ማጠቃለያ እና ምስጋና
+# 6. በጀት በጽሁፍ ሲገባ - ማጠቃለያ መስጠት እና መረጃውን ላንተ መላክ
 async def budget_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data['budget'] = update.message.text
     
     bedrooms_info = f"\n🛏️ **የመኝታ ብዛት:** {context.user_data['bedrooms']}" if context.user_data['property_type'] == 'የመኖሪያ' else ""
     
-    summary_text = (
+    # ለደንበኛው የሚላክ መልእክት
+    client_text = (
         "✨ **ያቀረቡት መረጃ በትክክል ተመዝግቧል!** ✨\n\n"
         f"👤 **ስም:** {context.user_data['name']}\n"
         f"📞 **ስልክ:** {context.user_data['phone']}\n"
@@ -135,7 +139,26 @@ async def budget_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         "የድርጅታችን አባል በተመዘገበው ስልክ ቁጥርዎ በቅርቡ አነጋግሮ አመርቂ መረጃ ያቀርብልዎታል።"
     )
     
-    await update.message.reply_text(summary_text, reply_markup=ReplyKeyboardRemove(), parse_mode='Markdown')
+    # ላንተ የሚላክ የአዲስ ደንበኛ መረጃ
+    admin_text = (
+        "🚨 **አዲስ የደንበኛ መረጃ መጥቷል!** 🚨\n\n"
+        f"👤 **ስም:** {context.user_data['name']}\n"
+        f"📞 **ስልክ:** {context.user_data['phone']}\n"
+        f"🏢 **ዓይነት:** {context.user_data['property_type']}"
+        f"{bedrooms_info}\n"
+        f"📍 **ቦታ:** {context.user_data['location']}\n"
+        f"💰 **በጀት:** {context.user_data['budget']}"
+    )
+
+    # ለደንበኛው መልስ መስጠት
+    await update.message.reply_text(client_text, reply_markup=ReplyKeyboardRemove(), parse_mode='Markdown')
+    
+    # መረጃውን ቀጥታ ላንተ መላክ
+    try:
+        await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=admin_text, parse_mode='Markdown')
+    except Exception as e:
+        logging.error(f"Failed to send lead to admin: {e}")
+
     return ConversationHandler.END
 
 # ሂደቱን ለማቋረጥ (/cancel)
